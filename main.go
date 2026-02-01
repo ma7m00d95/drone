@@ -24,7 +24,7 @@ func main() {
 
 	mux.HandleFunc("/create_order", handlers.CreateOrder)
 	mux.HandleFunc("/order_status", handlers.GetOrderStatus)
-
+	mux.HandleFunc("/cancel_order", handlers.CancelOrder)
 	//Admin
 mux.HandleFunc("/create_drone", handlers.CreateDrone)
 	mux.HandleFunc("/update_origin", handlers.UpdateOrderOrigin)

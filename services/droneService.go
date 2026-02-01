@@ -17,6 +17,7 @@ func GetDroneByID(droneID string) (model.Drone, error) {
 
 	return drone, nil
 }
+
 func GetDrones() ([]model.Drone, error) {
 	query := `select * from drones`
 
@@ -72,17 +73,19 @@ func UpdateDroneStatus(droneID string, status string) error {
 	}
 	//update order status
 	query = ` update orders set status=? where id =?  `
-	_, err = database.DB.Exec(query, "stopped", orderID)
+	_, err = database.DB.Exec(query, "pickup", orderID)
 	if err != nil {
 		return err
 	}
 	return nil
 }
+
 func UpdateDroneOrigin(l model.Location) error {
 	query := `update orders set origin=? where id=?`
 	_, err := database.DB.Exec(query, l.Origin, l.OrderID)
 	return err
 }
+
 func CreateDrone() error {
 	query := `insert into drones 
 	(status, lat, lng, current_order_id) 
@@ -96,10 +99,49 @@ func CreateDrone() error {
 
 	return nil
 }
+func TryAssignPendingOrder() error {
+	// 1) find pending order
+	var orderID int64
+	err := database.DB.QueryRow(`
+		SELECT id FROM orders 
+		WHERE status = 'pending' AND assigned_drone_id IS NULL
+		ORDER BY id ASC
+		LIMIT 1
+	`).Scan(&orderID)
 
-// Reserve a job.
-// ● Grab an order from a location (origin or broken drone).
-// ● Mark an order they have gotten as delivered or failed.
-// ● Mark themselves as broken (and in need of an order handoff).
-// ● Update their location (use latitude/longitude), and get a status update as a heartbeat.
-// ● Get details on the order they are currently assigned.
+	if err != nil {
+		// no pending orders
+		return nil
+	}
+
+	// 2) find available drone
+	var droneID int64
+	err = database.DB.QueryRow(`
+		SELECT id FROM drones 
+		WHERE status = 'fixed' AND current_order_id IS NULL
+		LIMIT 1
+	`).Scan(&droneID)
+
+	if err != nil {
+		// no available drone
+		return nil
+	}
+
+	// 3) assign
+	_, err = database.DB.Exec(`
+		UPDATE orders 
+		SET assigned_drone_id = ?, status = 'assigned'
+		WHERE id = ?
+	`, droneID, orderID)
+	if err != nil {
+		return err
+	}
+
+	_, err = database.DB.Exec(`
+		UPDATE drones 
+		SET current_order_id = ?, status = 'busy'
+		WHERE id = ?
+	`, orderID, droneID)
+
+	return err
+}

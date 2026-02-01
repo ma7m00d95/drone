@@ -64,13 +64,11 @@ func IsDroneID(id int64) bool {
 func CreateOrder(order model.Orders) (int64, error) {
 	query := `insert into orders 
 	(origin, destination, status, assigned_drone_id, current_lat, current_lng, created_by) 
-	values ( ?, ?, ?, ?, 0.0, 0.0, ?)`
+	values ( ?, ?, "pending", 0, 0.0, 0.0, ?)`
 
 	res, err := database.DB.Exec(query,
 		order.Origin,
 		order.Destination,
-		order.Status,
-		order.AssignedDroneID,
 		order.CreatedBy)
 	if err != nil {
 		log.Println("Failed to create order:", err)
@@ -79,6 +77,35 @@ func CreateOrder(order model.Orders) (int64, error) {
 	id, err := res.LastInsertId()
 
 	return id, nil
+}
+func AssignDroneToOrder(orderID int64) error {
+	query := `SELECT id FROM drones WHERE status = 'fixed' LIMIT 1`
+	var droneID int
+
+	err := database.DB.QueryRow(query).Scan(&droneID)
+	if err != nil {
+		// no available drone → order stays pending
+		return nil
+	}
+
+	// 2) update order
+	_, err = database.DB.Exec(`
+		UPDATE orders 
+		SET assigned_drone_id = ?, status = 'assigned'
+		WHERE id = ?
+	`, droneID, orderID)
+	if err != nil {
+		return err
+	}
+
+	// 3) update drone
+	_, err = database.DB.Exec(`
+		UPDATE drones 
+		SET status = 'busy', current_order_id = ?
+		WHERE id = ?
+	`, orderID, droneID)
+
+	return err
 }
 func GetOrderStatus(orderID string) (string, error) {
 	query := ` select status from orders where id =?  `
@@ -98,6 +125,11 @@ func UpdateOrderOrigin(l model.Location) error {
 func UpdateOrderDestination(d model.Location) error {
 	query := `update orders set destination=? where id=?`
 	_, err := database.DB.Exec(query, d.Destination, d.OrderID)
+	return err
+}
+func CancelOrder(orderID string) error {
+	query := `update orders set status = "cancelled" where id=? and status = "pending"`
+	_, err := database.DB.Exec(query, orderID)
 	return err
 }
 

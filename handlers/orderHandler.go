@@ -17,18 +17,41 @@ func CreateOrder(w http.ResponseWriter, r *http.Request) {
 	var order model.Orders
 
 	json.NewDecoder(r.Body).Decode(&order)
-	isDroneID := services.IsDroneID(order.AssignedDroneID)
-	if !isDroneID {
-		http.Error(w, "Invalid drone ID", http.StatusBadRequest)
-		return
-	}
-	_, err := services.CreateOrder(order)
+
+	id, err := services.CreateOrder(order)
 	if err != nil {
 		http.Error(w, "Failed to create order", http.StatusInternalServerError)
 		return
 	}
+	services.TryAssignPendingOrder()
+
+	err = services.AssignDroneToOrder(id)
+	if err != nil {
+		http.Error(w, "Failed to assign drone to order", http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(order)
+	json.NewEncoder(w).Encode("Order created successfully")
+
+}
+
+func CancelOrder(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	orderID := r.URL.Query().Get("order_id")
+
+	err := services.CancelOrder(orderID)
+	if err != nil {
+		http.Error(w, "Failed to cancel order", http.StatusInternalServerError)
+		return
+	}
+	services.TryAssignPendingOrder()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode("Order cancelled successfully")
 
 }
 func GetOrderByID(w http.ResponseWriter, r *http.Request) {
