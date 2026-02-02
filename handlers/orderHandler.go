@@ -8,12 +8,6 @@ import (
 )
 
 func CreateOrder(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
-	//get the whole order model from user and give it to the function
-
 	var order model.Orders
 
 	json.NewDecoder(r.Body).Decode(&order)
@@ -36,12 +30,8 @@ func CreateOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func CancelOrder(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
 
-	orderID := r.URL.Query().Get("order_id")
+	orderID := r.PathValue("order_id")
 
 	err := services.CancelOrder(orderID)
 	if err != nil {
@@ -55,11 +45,7 @@ func CancelOrder(w http.ResponseWriter, r *http.Request) {
 
 }
 func GetOrderByID(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
-	request := r.URL.Query().Get("order_id")
+	request := r.PathValue("order_id")
 	location, err := services.GetOrderByID(request)
 	if err != nil {
 		http.Error(w, "Failed to get order", http.StatusInternalServerError)
@@ -70,10 +56,7 @@ func GetOrderByID(w http.ResponseWriter, r *http.Request) {
 
 }
 func GetOrders(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
+
 	location, err := services.GetOrders()
 	if err != nil {
 		http.Error(w, "Failed to get order", http.StatusInternalServerError)
@@ -84,11 +67,8 @@ func GetOrders(w http.ResponseWriter, r *http.Request) {
 
 }
 func GetOrderStatus(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
-	req := r.URL.Query().Get("order_id")
+
+	req := r.PathValue("order_id")
 	status, err := services.GetOrderStatus(req)
 	if err != nil {
 		http.Error(w, "Failed to get order status", http.StatusInternalServerError)
@@ -98,10 +78,7 @@ func GetOrderStatus(w http.ResponseWriter, r *http.Request) {
 
 }
 func UpdateOrderOrigin(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
+
 	var origin model.Location
 	json.NewDecoder(r.Body).Decode(&origin)
 
@@ -114,10 +91,7 @@ func UpdateOrderOrigin(w http.ResponseWriter, r *http.Request) {
 
 }
 func UpdateOrderDestination(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
+
 	var destination model.Location
 	json.NewDecoder(r.Body).Decode(&destination)
 	err := services.UpdateOrderDestination(destination)
@@ -126,5 +100,21 @@ func UpdateOrderDestination(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write([]byte("Order destination updated successfully"))
+
+}
+func UpdateOrder(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+	status := r.PathValue("status")
+	orderID := r.PathValue("order_id")
+
+	err := services.UpdateOrder(status, orderID)
+	if err != nil {
+		http.Error(w, "Failed to update order", http.StatusInternalServerError)
+		return
+	}
+	w.Write([]byte("Order updated successfully"))
 
 }

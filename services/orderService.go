@@ -3,7 +3,9 @@ package services
 import (
 	"drone/database"
 	model "drone/models"
+	"fmt"
 	"log"
+	"strconv"
 )
 
 func GetOrderByID(orderID string) (model.Orders, error) {
@@ -60,8 +62,17 @@ func IsDroneID(id int64) bool {
 	}
 	return true
 }
-
-func CreateOrder(order model.Orders) (int64, error) {
+func IsOrderID(id string) bool {
+	ID, err := strconv.Atoi(id)
+	query := ` select id from orders where id =?  `
+	var orderID int64
+	err = database.DB.QueryRow(query, ID).Scan(&orderID)
+	if err != nil {
+		return false
+	}
+	return true
+}
+func CreateOrder(order model.Orders) (string, error) {
 	query := `insert into orders 
 	(origin, destination, status, assigned_drone_id, current_lat, current_lng, created_by) 
 	values ( ?, ?, "pending", 0, 0.0, 0.0, ?)`
@@ -72,13 +83,16 @@ func CreateOrder(order model.Orders) (int64, error) {
 		order.CreatedBy)
 	if err != nil {
 		log.Println("Failed to create order:", err)
-		return 0, err
+		return "", err
 	}
 	id, err := res.LastInsertId()
 
-	return id, nil
+	return strconv.Itoa(int(id)), err
 }
-func AssignDroneToOrder(orderID int64) error {
+func AssignDroneToOrder(orderID string) error {
+	if !IsOrderID(orderID) {
+		return fmt.Errorf("Invalid order ID")
+	}
 	query := `SELECT id FROM drones WHERE status = 'fixed' LIMIT 1`
 	var droneID int
 
@@ -108,6 +122,9 @@ func AssignDroneToOrder(orderID int64) error {
 	return err
 }
 func GetOrderStatus(orderID string) (string, error) {
+	if !IsOrderID(orderID) {
+		return "", fmt.Errorf("Invalid order ID")
+	}
 	query := ` select status from orders where id =?  `
 	status := ""
 	err := database.DB.QueryRow(query, orderID).Scan(&status)
@@ -118,24 +135,45 @@ func GetOrderStatus(orderID string) (string, error) {
 	return status, nil
 }
 func UpdateOrderOrigin(l model.Location) error {
+	if !IsOrderID(l.OrderID) {
+		return fmt.Errorf("Invalid order ID")
+	}
 	query := `update orders set origin=? where id=?`
 	_, err := database.DB.Exec(query, l.Origin, l.OrderID)
 	return err
 }
 func UpdateOrderDestination(d model.Location) error {
+	if !IsOrderID(d.OrderID) {
+		return fmt.Errorf("Invalid order ID")
+	}
 	query := `update orders set destination=? where id=?`
 	_, err := database.DB.Exec(query, d.Destination, d.OrderID)
 	return err
 }
 func CancelOrder(orderID string) error {
+	if !IsOrderID(orderID) {
+		return fmt.Errorf("Invalid order ID")
+	}
 	query := `update orders set status = "cancelled" where id=? and status = "pending"`
 	_, err := database.DB.Exec(query, orderID)
 	return err
 }
-
-// Reserve a job.
-// ● Grab an order from a location (origin or broken drone).
-// ● Mark an order they have gotten as delivered or failed.
-// ● Mark themselves as broken (and in need of an order handoff).
-// ● Update their location (use latitude/longitude), and get a status update as a heartbeat.
-// ● Get details on the order they are currently assigned.
+func UpdateOrder(status string, orderID string) error {
+	if !IsOrderID(orderID) {
+		return fmt.Errorf("Invalid order ID")
+	}
+	//only the order that are picked in DB can be changed to these status
+	if status != "Delivered" &&
+		status != "Failed" {
+		return fmt.Errorf("Invalid status")
+	}
+	query := `update orders set status=? where id=? and status = "InProcess"`
+	id, err := database.DB.Exec(query, status, orderID)
+	if err != nil {
+		return err
+	}
+	if i, _ := id.RowsAffected(); i == 0 {
+		return fmt.Errorf("Order not in 'InProcess' status")
+	}
+	return err
+}

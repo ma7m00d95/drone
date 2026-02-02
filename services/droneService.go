@@ -101,7 +101,7 @@ func CreateDrone() error {
 }
 func TryAssignPendingOrder() error {
 	// 1) find pending order
-	var orderID int64
+	var orderID string
 	err := database.DB.QueryRow(`
 		SELECT id FROM orders 
 		WHERE status = 'pending' AND assigned_drone_id IS NULL
@@ -115,7 +115,7 @@ func TryAssignPendingOrder() error {
 	}
 
 	// 2) find available drone
-	var droneID int64
+	var droneID string
 	err = database.DB.QueryRow(`
 		SELECT id FROM drones 
 		WHERE status = 'fixed' AND current_order_id IS NULL
