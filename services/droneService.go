@@ -3,6 +3,7 @@ package services
 import (
 	"drone/database"
 	model "drone/models"
+	"fmt"
 	"log"
 )
 
@@ -62,7 +63,7 @@ func UpdateDroneStatus(droneID string, status string) error {
 	if err != nil {
 		return err
 	}
-	if status == "fixed" {
+	if status == "Fixed" {
 		return nil
 	}
 	// get the ID
@@ -73,7 +74,7 @@ func UpdateDroneStatus(droneID string, status string) error {
 	}
 	//update order status
 	query = ` update orders set status=? where id =?  `
-	_, err = database.DB.Exec(query, "pickup", orderID)
+	_, err = database.DB.Exec(query, "Pickup", orderID)
 	if err != nil {
 		return err
 	}
@@ -89,7 +90,7 @@ func UpdateDroneOrigin(l model.Location) error {
 func CreateDrone() error {
 	query := `insert into drones 
 	(status, lat, lng, current_order_id) 
-	values ( "fixed", 0.0, 0.0, null)`
+	values ( "Fixed", 0.0, 0.0, null)`
 
 	_, err := database.DB.Exec(query)
 	if err != nil {
@@ -104,7 +105,7 @@ func TryAssignPendingOrder() error {
 	var orderID string
 	err := database.DB.QueryRow(`
 		SELECT id FROM orders 
-		WHERE status = 'pending' AND assigned_drone_id IS NULL
+		WHERE status = 'Pending' AND assigned_drone_id IS NULL
 		ORDER BY id ASC
 		LIMIT 1
 	`).Scan(&orderID)
@@ -118,7 +119,7 @@ func TryAssignPendingOrder() error {
 	var droneID string
 	err = database.DB.QueryRow(`
 		SELECT id FROM drones 
-		WHERE status = 'fixed' AND current_order_id IS NULL
+		WHERE status = 'Fixed' AND current_order_id IS NULL
 		LIMIT 1
 	`).Scan(&droneID)
 
@@ -130,7 +131,7 @@ func TryAssignPendingOrder() error {
 	// 3) assign
 	_, err = database.DB.Exec(`
 		UPDATE orders 
-		SET assigned_drone_id = ?, status = 'assigned'
+		SET assigned_drone_id = ?, status = 'Assigned'
 		WHERE id = ?
 	`, droneID, orderID)
 	if err != nil {
@@ -139,9 +140,89 @@ func TryAssignPendingOrder() error {
 
 	_, err = database.DB.Exec(`
 		UPDATE drones 
-		SET current_order_id = ?, status = 'busy'
+		SET current_order_id = ?, status = 'Busy'
 		WHERE id = ?
 	`, orderID, droneID)
 
 	return err
+}
+func ReserveOrderToDrone(droneID string) error {
+	// find pending order
+	var orderID string
+	err := database.DB.QueryRow(`
+		SELECT id FROM orders 
+		WHERE status = 'Pending' AND assigned_drone_id = 0 
+		ORDER BY id ASC
+		LIMIT 1
+	`).Scan(&orderID)
+	if err != nil {
+		return err
+	}
+	//we will get one order or 0
+	_, err = database.DB.Exec(`
+		UPDATE orders 
+		SET assigned_drone_id = ?, status = 'Assigned'
+		WHERE id = ?
+	`, droneID, orderID)
+	if err != nil {
+		return err
+	}
+
+	_, err = database.DB.Exec(`
+		UPDATE drones
+		SET current_order_id = ?, status = 'Busy'
+		WHERE id = ?
+	`, orderID, droneID)
+
+	return err
+}
+func DronePickupOrder(droneID string) error {
+	// get current order assigned to drone
+	var orderID string
+	err := database.DB.QueryRow(`
+		SELECT current_order_id FROM drones 
+		WHERE id = ?
+	`, droneID).Scan(&orderID)
+	if err != nil {
+		return err
+	}
+
+	// update order status to inprocess
+	_, err = database.DB.Exec(`
+		UPDATE orders 
+		SET status = 'InProcess'
+		WHERE id = ?
+	`, orderID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func UpdateDroneLocation(drone model.Drone) error {
+	query := ` update drones set lat=?, lng=? where id =?  `
+	record, err := database.DB.Exec(query, drone.Lat, drone.Lng, drone.ID)
+	if err != nil {
+		return err
+	}
+	affected, err := record.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return fmt.Errorf("No drone found with ID %s", drone.ID)
+	}
+	return nil
+}
+func GetDroneCurrentOrder(droneID string) (model.Orders, error) {
+	var order model.Orders
+	query := ` select o.id, o.origin, o.destination, o.status from orders o
+	JOIN drones d ON o.id = d.current_order_id
+	where d.id =?  `
+	err := database.DB.QueryRow(query, droneID).Scan(&order.ID, &order.Origin, &order.Destination, &order.Status)
+	if err != nil {
+		return model.Orders{}, err
+	}
+	return order, nil
 }

@@ -46,24 +46,46 @@ func CancelOrder(w http.ResponseWriter, r *http.Request) {
 }
 func GetOrderByID(w http.ResponseWriter, r *http.Request) {
 	request := r.PathValue("order_id")
-	location, err := services.GetOrderByID(request)
+	order, err := services.GetOrderByID(request)
 	if err != nil {
 		http.Error(w, "Failed to get order", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(location)
+	json.NewEncoder(w).Encode(order)
 
 }
 func GetOrders(w http.ResponseWriter, r *http.Request) {
 
-	location, err := services.GetOrders()
+	orders, err := services.GetOrders()
 	if err != nil {
 		http.Error(w, "Failed to get order", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(location)
+	json.NewEncoder(w).Encode(orders)
+
+}
+func GetUserOrders(w http.ResponseWriter, r *http.Request) {
+	userID := r.PathValue("user_id")
+	orders, err := services.GetUserOrders(userID)
+	if err != nil {
+		http.Error(w, "Failed to get user orders", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(orders)
+
+}
+func GetInProcessOrders(w http.ResponseWriter, r *http.Request) {
+
+	orders, err := services.GetInProcessOrders()
+	if err != nil {
+		http.Error(w, "Failed to get order", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(orders)
 
 }
 func GetOrderStatus(w http.ResponseWriter, r *http.Request) {
@@ -116,5 +138,30 @@ func UpdateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write([]byte("Order updated successfully"))
+
+}
+
+func DeliverOrder(w http.ResponseWriter, r *http.Request) {
+	var order model.Orders
+	json.NewDecoder(r.Body).Decode(&order)
+	err := services.DeliverOrder(order.ID)
+	if err != nil {
+		http.Error(w, "Failed to deliver order by drone", http.StatusInternalServerError)
+		return
+	}
+	services.FreeDrone(order.AssignedDroneID)
+	w.Write([]byte("Order delivered by drone successfully"))
+
+}
+func FailOrder(w http.ResponseWriter, r *http.Request) {
+	var order model.Orders
+	json.NewDecoder(r.Body).Decode(&order)
+	err := services.FailOrder(order.ID)
+	if err != nil {
+		http.Error(w, "Failed to mark order as failed by drone", http.StatusInternalServerError)
+		return
+	}
+	services.FreeDrone(order.AssignedDroneID)
+	w.Write([]byte("Order marked as failed by drone successfully"))
 
 }
