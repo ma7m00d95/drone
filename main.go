@@ -6,19 +6,37 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strings"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
 
 	// init database
 	database.InitDB()
+	// 1. Load the specific config.env file
+	err := godotenv.Load("config.env")
+	if err != nil {
+		log.Fatal("Error loading config.env file")
+	}
+
+	// 2. Now you can grab the secret
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatal("JWT_SECRET not found in config.env")
+	}
 
 	mux := http.NewServeMux()
+	publicMux := http.NewServeMux()
 
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	publicMux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
+	publicMux.HandleFunc("POST /login", handlers.Login) // 👈 ADD THIS LINE HERE
+
 	mux.HandleFunc("GET /get_orderByID/{order_id}", handlers.GetOrderByID)
 	mux.HandleFunc("GET /get_orders", handlers.GetOrders)
 	mux.HandleFunc("GET /get_inProcess_orders", handlers.GetInProcessOrders)
@@ -44,14 +62,53 @@ func main() {
 	mux.HandleFunc("POST /drones/pickup", handlers.DronePickupOrder)
 	mux.HandleFunc("GET /drones/current-order/{drone_id}", handlers.GetDroneCurrentOrder)
 
+	rootMux := http.NewServeMux()
+	rootMux.Handle("/health", publicMux)
+
+	rootMux.Handle("/login", publicMux)
+
+	rootMux.Handle("/",
+		AuthMiddleware(mux, jwtSecret),
+	)
+
 	server := &http.Server{
 		Addr:    ":8080",
-		Handler: mux,
+		Handler: rootMux,
 	}
 	log.Println("Server starting on :8080")
 
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	if err != nil {
 		fmt.Println("server error:", err)
 	}
+}
+
+func AuthMiddleware(next http.Handler, secret string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		// Allow health without auth
+		if r.URL.Path == "/health" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
+			return
+		}
+
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+		claims, err := handlers.ValidateJWT(tokenString)
+		if err != nil {
+			http.Error(w, "Invalid token: "+err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		// optional context injection later
+		log.Printf("Authenticated user: %s | role: %s\n", claims.UserID, claims.Role)
+
+		next.ServeHTTP(w, r)
+	})
 }
