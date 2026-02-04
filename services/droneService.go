@@ -7,7 +7,7 @@ import (
 	"log"
 )
 
-func GetDroneByID(droneID string) (model.Drone, error) {
+func GetDroneByID(droneID int) (model.Drone, error) {
 	query := `select * from drones where id = ?`
 	drone := model.Drone{}
 	err := database.DB.QueryRow(query, droneID).Scan(&drone.ID, &drone.Status, &drone.Lat, &drone.Lng, &drone.OrderID)
@@ -19,6 +19,17 @@ func GetDroneByID(droneID string) (model.Drone, error) {
 	return drone, nil
 }
 
+func GetDroneByOrderID(orderID int) (model.Drone, error) {
+	query := `select id from drones where current_order_id = ?`
+	var drone model.Drone
+	err := database.DB.QueryRow(query, orderID).Scan(&drone.ID)
+	if err != nil {
+		log.Println("Failed to get drone:", err)
+		return model.Drone{}, err
+	}
+
+	return drone, nil
+}
 func GetDrones() ([]model.Drone, error) {
 	query := `select * from drones`
 
@@ -48,7 +59,7 @@ func GetDrones() ([]model.Drone, error) {
 	return droneList, nil
 }
 
-func GetDroneStatus(droneID string) (string, error) {
+func GetDroneStatus(droneID int) (string, error) {
 	query := ` select status from drones where id =?  `
 	status := ""
 	err := database.DB.QueryRow(query, droneID).Scan(&status)
@@ -90,7 +101,7 @@ func UpdateDroneOrigin(l model.Location) error {
 func CreateDrone() error {
 	query := `insert into drones 
 	(status, lat, lng, current_order_id) 
-	values ( "Fixed", 0.0, 0.0, null)`
+	values ( "Available", 0.0, 0.0, 0)`
 
 	_, err := database.DB.Exec(query)
 	if err != nil {
@@ -105,7 +116,7 @@ func TryAssignPendingOrder() error {
 	var orderID string
 	err := database.DB.QueryRow(`
 		SELECT id FROM orders 
-		WHERE status = 'Pending' AND assigned_drone_id IS NULL
+		WHERE status = 'Pending' AND assigned_drone_id IS 0
 		ORDER BY id ASC
 		LIMIT 1
 	`).Scan(&orderID)
@@ -119,7 +130,7 @@ func TryAssignPendingOrder() error {
 	var droneID string
 	err = database.DB.QueryRow(`
 		SELECT id FROM drones 
-		WHERE status = 'Fixed' AND current_order_id IS NULL
+		WHERE status = 'Available' OR status = 'Fixed' AND current_order_id IS 0
 		LIMIT 1
 	`).Scan(&droneID)
 
@@ -146,7 +157,7 @@ func TryAssignPendingOrder() error {
 
 	return err
 }
-func ReserveOrderToDrone(droneID string) error {
+func ReserveOrderToDrone(droneID int) error {
 	// find pending order
 	var orderID string
 	err := database.DB.QueryRow(`
@@ -176,7 +187,7 @@ func ReserveOrderToDrone(droneID string) error {
 
 	return err
 }
-func DronePickupOrder(droneID string) error {
+func DronePickupOrder(droneID int) error {
 	// get current order assigned to drone
 	var orderID string
 	err := database.DB.QueryRow(`

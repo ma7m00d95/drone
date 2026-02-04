@@ -61,7 +61,7 @@ func DronePickupOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write([]byte("Order picked up by drone successfully"))
-	
+
 }
 func UpdateDroneLocation(w http.ResponseWriter, r *http.Request) {
 	var drone model.Drone

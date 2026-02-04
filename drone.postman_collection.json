@@ -1,0 +1,537 @@
+{
+  "info": {
+    "_postman_id": "d0fe5e3f-9cac-4247-a6cf-2461b0fb8022",
+    "name": "drone",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "51984550",
+    "_collection_link": "https://go.postman.co/collection/51984550-d0fe5e3f-9cac-4247-a6cf-2461b0fb8022?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "update drone status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{local}}/update_drone_status/7/Broken",
+              "host": [
+                "{{local}}"
+              ],
+              "path": [
+                "update_drone_status",
+                "7",
+                "Broken"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Drone",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{local}}/create_drone",
+              "host": [
+                "{{local}}"
+              ],
+              "path": [
+                "create_drone"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "get order By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{local}}/get_orderByID/1",
+              "host": [
+                "{{local}}"
+              ],
+              "path": [
+                "get_orderByID",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get order Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{local}}/order_status?order_id=1",
+              "host": [
+                "{{local}}"
+              ],
+              "path": [
+                "order_status"
+              ],
+              "query": [
+                {
+                  "key": "order_id",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get orders",
+          "request": {
+            "auth": {
+              "type": "jwt",
+              "jwt": [
+                {
+                  "key": "secret",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiMSIsInJvbGUiOiJhZG1pbiJ9.CmH_fJXgXWN-9bu9ZQzIwb-lIMvQGfaEzLVwQ7qc3nw",
+                  "type": "string"
+                },
+                {
+                  "key": "algorithm",
+                  "value": "HS256",
+                  "type": "string"
+                },
+                {
+                  "key": "isSecretBase64Encoded",
+                  "value": false,
+                  "type": "boolean"
+                },
+                {
+                  "key": "payload",
+                  "value": "{}",
+                  "type": "string"
+                },
+                {
+                  "key": "addTokenTo",
+                  "value": "header",
+                  "type": "string"
+                },
+                {
+                  "key": "headerPrefix",
+                  "value": "Bearer",
+                  "type": "string"
+                },
+                {
+                  "key": "queryParamKey",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "header",
+                  "value": "{}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{local}}/get_orders",
+              "host": [
+                "{{local}}"
+              ],
+              "path": [
+                "get_orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get inProcess orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{local}}/get_inProcess_orders",
+              "host": [
+                "{{local}}"
+              ],
+              "path": [
+                "get_inProcess_orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get user orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{local}}/get_user_orders/user-001",
+              "host": [
+                "{{local}}"
+              ],
+              "path": [
+                "get_user_orders",
+                "user-001"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "create order",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\"origin\":\"saar\",\n\"destination\":\"a'ali\",\n\"created_by\":3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{local}}/create_order",
+              "host": [
+                "{{local}}"
+              ],
+              "path": [
+                "create_order"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{local}}/cancel_order/7",
+              "host": [
+                "{{local}}"
+              ],
+              "path": [
+                "cancel_order",
+                "7"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "order delivered or failed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{local}}/update_order/7/Failed",
+              "host": [
+                "{{local}}"
+              ],
+              "path": [
+                "update_order",
+                "7",
+                "Failed"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update order destination",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\"order_id\":\"1\",\n\"destination\":\"Dubai\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{local}}/update_destination",
+              "host": [
+                "{{local}}"
+              ],
+              "path": [
+                "update_destination"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update order origin",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\"order_id\":\"3\",\n\"origin\":\"Branch_C\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{local}}/update_origin",
+              "host": [
+                "{{local}}"
+              ],
+              "path": [
+                "update_origin"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "fail order",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"order_id\":2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{local}}/orders/fail",
+              "host": [
+                "{{local}}"
+              ],
+              "path": [
+                "orders",
+                "fail"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Drones",
+      "item": [
+        {
+          "name": "Get Drone Locatiom",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"drone_id\": \"1\",\n    \"lat\": 12.34,\n    \"lng\": 56.78\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{local}}/drones/location",
+              "host": [
+                "{{local}}"
+              ],
+              "path": [
+                "drones",
+                "location"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Drone orders",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"drone_id\": \"1\",\n    \"lat\": 12.34,\n    \"lng\": 56.78\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{local}}/drones/current-order/3",
+              "host": [
+                "{{local}}"
+              ],
+              "path": [
+                "drones",
+                "current-order",
+                "3"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "reserve order to drone",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"drone_id\": \"1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{local}}/drones/reserve",
+              "host": [
+                "{{local}}"
+              ],
+              "path": [
+                "drones",
+                "reserve"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Drone pickup order",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"drone_id\": \"1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{local}}/drones/pickup",
+              "host": [
+                "{{local}}"
+              ],
+              "path": [
+                "drones",
+                "pickup"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{local}}/health",
+          "host": [
+            "{{local}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_id\": \"1\",\n  \"role\": \"admin\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{local}}/login",
+          "host": [
+            "{{local}}"
+          ],
+          "path": [
+            "login"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiMSIsInJvbGUiOiJhZG1pbiIsImlzcyI6ImRyb25lLXN5c3RlbSIsImV4cCI6MTc3MDMwNjIzNywiaWF0IjoxNzcwMjE5ODM3fQ.UmlrwoFfz0xUcZJl00JQRusmOecMpYk6NCS-7CtxTwc",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "Authorization",
+      "value": ""
+    }
+  ]
+}

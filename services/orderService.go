@@ -5,7 +5,6 @@ import (
 	model "drone/models"
 	"fmt"
 	"log"
-	"strconv"
 )
 
 func GetOrderByID(orderID string) (model.Orders, error) {
@@ -84,7 +83,6 @@ func GetUserOrders(userID string) ([]model.Orders, error) {
 
 		orderList = append(orderList, order)
 	}
-
 	return orderList, nil
 }
 
@@ -122,26 +120,25 @@ func GetInProcessOrders() ([]model.Orders, error) {
 
 	return orderList, nil
 }
-func IsDroneID(id int64) bool {
+func IsDroneID(id int) bool {
 	query := ` select id from drones where id =?  `
-	var droneID int64
+	var droneID int
 	err := database.DB.QueryRow(query, id).Scan(&droneID)
 	if err != nil {
 		return false
 	}
 	return true
 }
-func IsOrderID(id string) bool {
-	ID, err := strconv.Atoi(id)
+func IsOrderID(id int) bool {
 	query := ` select id from orders where id =?  `
 	var orderID int64
-	err = database.DB.QueryRow(query, ID).Scan(&orderID)
+	err := database.DB.QueryRow(query, id).Scan(&orderID)
 	if err != nil {
 		return false
 	}
 	return true
 }
-func CreateOrder(order model.Orders) (string, error) {
+func CreateOrder(order model.Orders) (int, error) {
 	query := `insert into orders 
 	(origin, destination, status, assigned_drone_id, current_lat, current_lng, created_by) 
 	values ( ?, ?, "Pending", 0, 0.0, 0.0, ?)`
@@ -152,13 +149,13 @@ func CreateOrder(order model.Orders) (string, error) {
 		order.CreatedBy)
 	if err != nil {
 		log.Println("Failed to create order:", err)
-		return "", err
+		return 0, err
 	}
 	id, err := res.LastInsertId()
 
-	return strconv.Itoa(int(id)), err
+	return int(id), err
 }
-func AssignDroneToOrder(orderID string) error {
+func AssignDroneToOrder(orderID int) error {
 	if !IsOrderID(orderID) {
 		return fmt.Errorf("Invalid order ID")
 	}
@@ -167,11 +164,10 @@ func AssignDroneToOrder(orderID string) error {
 
 	err := database.DB.QueryRow(query).Scan(&droneID)
 	if err != nil {
-		// no available drone → order stays pending
 		return nil
 	}
 
-	// 2) update order
+	//update order
 	_, err = database.DB.Exec(`
 		UPDATE orders 
 		SET assigned_drone_id = ?, status = 'Assigned'
@@ -181,7 +177,7 @@ func AssignDroneToOrder(orderID string) error {
 		return err
 	}
 
-	// 3) update drone
+	//update drone
 	_, err = database.DB.Exec(`
 		UPDATE drones 
 		SET status = 'Busy', current_order_id = ?
@@ -190,7 +186,7 @@ func AssignDroneToOrder(orderID string) error {
 
 	return err
 }
-func GetOrderStatus(orderID string) (string, error) {
+func GetOrderStatus(orderID int) (string, error) {
 	if !IsOrderID(orderID) {
 		return "", fmt.Errorf("Invalid order ID")
 	}
@@ -219,7 +215,7 @@ func UpdateOrderDestination(d model.Location) error {
 	_, err := database.DB.Exec(query, d.Destination, d.OrderID)
 	return err
 }
-func CancelOrder(orderID string) error {
+func CancelOrder(orderID int) error {
 	if !IsOrderID(orderID) {
 		return fmt.Errorf("Invalid order ID")
 	}
@@ -227,7 +223,7 @@ func CancelOrder(orderID string) error {
 	_, err := database.DB.Exec(query, orderID)
 	return err
 }
-func UpdateOrder(status string, orderID string) error {
+func UpdateOrder(status string, orderID int) error {
 	if !IsOrderID(orderID) {
 		return fmt.Errorf("Invalid order ID")
 	}
@@ -247,29 +243,41 @@ func UpdateOrder(status string, orderID string) error {
 	return err
 }
 
-func DeliverOrder(orderID string) error {
+func DeliverOrder(orderID int) error {
 	if !IsOrderID(orderID) {
 		return fmt.Errorf("Invalid order ID")
 	}
 	query := `update orders set status = "Delivered" where id=? and status = "InProcess"`
 	_, err := database.DB.Exec(query, orderID)
 	return err
-	
+
 }
+
 // internal API
-func FreeDrone(droneID int64) error {
+func FreeDrone(droneID int) error {
 	if !IsDroneID(droneID) {
 		return fmt.Errorf("Invalid drone ID")
 	}
-	query := `update drones set status = "Fixed", current_order_id = 0 where id=?`
+	query := `update drones set status = "Available", current_order_id = 0 where id=?`
 	_, err := database.DB.Exec(query, droneID)
+
 	return err
 }
-func FailOrder(orderID string) error {
+func FailOrder(orderID int) error {
 	if !IsOrderID(orderID) {
 		return fmt.Errorf("Invalid order ID")
 	}
-	query := `update orders set status = "Failed" where id=? and status = "InProcess"`
+	query := `update orders set status = "Failed", assigned_drone_id = 0 where id=? and status = "Assigned"`
 	_, err := database.DB.Exec(query, orderID)
 	return err
+}
+
+func IsUser(userID int) error {
+	query := ` select id from users where id =?  `
+	var id string
+	err := database.DB.QueryRow(query, userID).Scan(&id)
+	if err != nil {
+		return fmt.Errorf("User not found")
+	}
+	return nil
 }

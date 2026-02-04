@@ -16,13 +16,12 @@ func main() {
 
 	// init database
 	database.InitDB()
-	// 1. Load the specific config.env file
+
 	err := godotenv.Load("config.env")
 	if err != nil {
 		log.Fatal("Error loading config.env file")
 	}
 
-	// 2. Now you can grab the secret
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		log.Fatal("JWT_SECRET not found in config.env")
@@ -63,6 +62,7 @@ func main() {
 	mux.HandleFunc("GET /drones/current-order/{drone_id}", handlers.GetDroneCurrentOrder)
 
 	rootMux := http.NewServeMux()
+	
 	rootMux.Handle("/health", publicMux)
 
 	rootMux.Handle("/login", publicMux)
@@ -86,7 +86,6 @@ func main() {
 func AuthMiddleware(next http.Handler, secret string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		// Allow health without auth
 		if r.URL.Path == "/health" {
 			next.ServeHTTP(w, r)
 			return
@@ -105,8 +104,6 @@ func AuthMiddleware(next http.Handler, secret string) http.Handler {
 			http.Error(w, "Invalid token: "+err.Error(), http.StatusUnauthorized)
 			return
 		}
-
-		// optional context injection later
 		log.Printf("Authenticated user: %s | role: %s\n", claims.UserID, claims.Role)
 
 		next.ServeHTTP(w, r)

@@ -5,13 +5,17 @@ import (
 	services "drone/services"
 	"encoding/json"
 	"net/http"
+	"strconv"
 )
 
 func CreateOrder(w http.ResponseWriter, r *http.Request) {
 	var order model.Orders
 
 	json.NewDecoder(r.Body).Decode(&order)
-
+	if err := services.IsUser(order.CreatedBy); err != nil {
+		http.Error(w, "Invalid user", http.StatusBadRequest)
+		return
+	}
 	id, err := services.CreateOrder(order)
 	if err != nil {
 		http.Error(w, "Failed to create order", http.StatusInternalServerError)
@@ -31,11 +35,25 @@ func CreateOrder(w http.ResponseWriter, r *http.Request) {
 
 func CancelOrder(w http.ResponseWriter, r *http.Request) {
 
-	orderID := r.PathValue("order_id")
+	orderID, err := strconv.Atoi(r.PathValue("order_id"))
+	if err != nil {
+		http.Error(w, "Invalid order ID", http.StatusBadRequest)
+		return
+	}
 
-	err := services.CancelOrder(orderID)
+	err = services.CancelOrder(orderID)
 	if err != nil {
 		http.Error(w, "Failed to cancel order", http.StatusInternalServerError)
+		return
+	}
+	drone, err := services.GetDroneByOrderID(orderID)
+	if err != nil {
+		http.Error(w, "Failed to get drone by order ID", http.StatusInternalServerError)
+		return
+	}
+	err = services.FreeDrone(drone.ID)
+	if err != nil {
+		http.Error(w, "Failed to free drone", http.StatusInternalServerError)
 		return
 	}
 	services.TryAssignPendingOrder()
@@ -91,7 +109,12 @@ func GetInProcessOrders(w http.ResponseWriter, r *http.Request) {
 func GetOrderStatus(w http.ResponseWriter, r *http.Request) {
 
 	req := r.PathValue("order_id")
-	status, err := services.GetOrderStatus(req)
+	orderID, err := strconv.Atoi(req)
+	if err != nil {
+		http.Error(w, "Invalid order ID", http.StatusBadRequest)
+		return
+	}
+	status, err := services.GetOrderStatus(orderID)
 	if err != nil {
 		http.Error(w, "Failed to get order status", http.StatusInternalServerError)
 		return
@@ -125,14 +148,14 @@ func UpdateOrderDestination(w http.ResponseWriter, r *http.Request) {
 
 }
 func UpdateOrder(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+	status := r.PathValue("status")
+	orderID, err := strconv.Atoi(r.PathValue("order_id"))
+	if err != nil {
+		http.Error(w, "Invalid order ID", http.StatusBadRequest)
 		return
 	}
-	status := r.PathValue("status")
-	orderID := r.PathValue("order_id")
 
-	err := services.UpdateOrder(status, orderID)
+	err = services.UpdateOrder(status, orderID)
 	if err != nil {
 		http.Error(w, "Failed to update order", http.StatusInternalServerError)
 		return
@@ -161,7 +184,14 @@ func FailOrder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to mark order as failed by drone", http.StatusInternalServerError)
 		return
 	}
-	services.FreeDrone(order.AssignedDroneID)
+	drone, err := services.GetDroneByOrderID(order.ID)
+	if err != nil {
+		http.Error(w, "Failed to get drone by order ID", http.StatusInternalServerError)
+		return
+	}
+	services.FreeDrone(drone.ID)
+	services.TryAssignPendingOrder()
+
 	w.Write([]byte("Order marked as failed by drone successfully"))
 
 }
